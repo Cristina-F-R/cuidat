@@ -139,70 +139,48 @@ CuidaT is a reactive web application designed for visual tracking, correlation, 
 \---
 
 &nbsp;
-
-\#\# 4\. Scaffolding & Directory Tree
-
-&nbsp;
+## 4. Scaffolding & Directory Tree
 
 /root
-
-├── package.json (npm workspaces: \["shared", "client", "server"\])
-
+├── package.json               # Monorepo root config (npm workspaces: ["shared", "client", "server"])
+├── .gitignore                 # Universal root ignore rules
 ├── /shared
-
-│   ├── package.json
-
+│   ├── package.json           # Workspace package config
 │   └── src/
-
-│       ├── types.ts           \# Shared domain models (Profiles, Logs, Items)
-
-│       ├── schemas.ts         \# Runtime Zod validation schemas
-
-│       └── correlation.ts     \# Pure deterministic correlation algorithms
-
+│       ├── types.ts           # Shared domain models (Profiles, Logs, Items)
+│       ├── schemas.ts         # Runtime Zod validation schemas
+│       └── correlation.ts     # Pure deterministic correlation algorithms
 ├── /client
-
-│   ├── index.html             \# Google Fonts preconnect & root container
-
-│   ├── tailwind.config.js     \# Extended color palette & typography
-
+│   ├── package.json           # Frontend dependencies & scripts
+│   ├── vite.config.ts         # Vite build & dev server config (HMR: 127.0.0.1)
+│   ├── tailwind.config.js     # Custom token palette (slate, peach, sky, mint, tint, canvas)
+│   ├── postcss.config.js      # PostCSS configuration for Tailwind
+│   ├── index.html             # Entry HTML & Google Fonts
 │   └── src/
-
+│       ├── style.css          # Tailwind base/components/utilities directives
+│       ├── main.ts            # Vue app entry point & Pinia mount
+│       ├── App.vue            # Root UI layout container
 │       ├── components/
-
-│       │   ├── calendar/      \# CalendarGrid.vue, CalendarDayCell.vue
-
-│       │   ├── dock/          \# SidebarDock.vue, DraggableBadge.vue
-
-│       │   ├── summary/       \# MonthlyInsightsSummary.vue
-
-│       │   └── modals/        \# EventLogModal.vue (Create / Update / Delete)
-
-│       ├── composables/       \# useCalendar.ts, useInteraction.ts
-
-│       ├── stores/            \# useProfileStore.ts, useEventStore.ts, useAuthStore.ts
-
-│       └── views/             \# LandingView.vue, DashboardView.vue, SettingsView.vue
-
+│       │   ├── calendar/      # CalendarGrid.vue, CalendarDayCell.vue
+│       │   ├── dock/          # SidebarDock.vue, DraggableBadge.vue
+│       │   ├── summary/       # MonthlyInsightsSummary.vue
+│       │   └── modals/        # EventLogModal.vue (Create / Update / Delete)
+│       ├── composables/       # useCalendar.ts, useInteraction.ts
+│       ├── stores/            # useProfileStore.ts, useEventStore.ts, useAuthStore.ts
+│       └── views/             # LandingView.vue, DashboardView.vue, SettingsView.vue
 ├── /server
-
+│   ├── package.json           # Backend dependencies & scripts (Express, pg, tsx)
+│   ├── tsconfig.json          # Node/TS compilation settings
 │   └── src/
-
-│       ├── controllers/       \# Express HTTP controllers
-
-│       ├── middlewares/       \# AuthMiddleware, RateLimiter (express-rate-limit)
-
-│       ├── repositories/      \# Tenant-scoped PostgreSQL data access
-
-│       ├── services/          \# Business logic & Google Gemini AI service
-
-│       └── db/                \# SQL migration files and connection pooling
-
+│       ├── index.ts           # Express server entry point & middleware bootstrap
+│       ├── controllers/       # Express HTTP route controllers
+│       ├── middlewares/       # AuthMiddleware, RateLimiter (express-rate-limit)
+│       ├── repositories/      # Tenant-scoped PostgreSQL data access (pg Pool)
+│       ├── services/          # Business logic & Google Gemini AI service
+│       └── db/                # SQL migration files and connection pooling
 └── /tests
-
-    ├── unit/                  \# Vitest specs for shared domain & stores
-
-    └── e2e/                   \# Playwright critical journey specs
+    ├── unit/                  # Vitest specs for shared domain, schemas & stores
+    └── e2e/                   # Playwright critical journey specs
 
 &nbsp;
 
@@ -228,11 +206,19 @@ DATABASE\_URL=postgresql://cuidat\_user:secure\_password@localhost:5432/cuidat\_
 
 JWT\_SECRET=super\_secret\_session\_key\_min\_32\_chars
 
-GEMINI\_API\_KEY=AIzaSy...
+GEMINI\_API\_KEY=replace\_with\_a\_secret\_stored\_outside\_git
 
 &nbsp;
 
 \---
+
+\#\# 5.1 Secret management
+
+\- `GEMINI_API_KEY` must be configured only in the backend environment (`server/.env` locally or the deployment provider's secret manager). It must never be committed, documented with a real value, or exposed through a `VITE_` variable.
+\- `server/.env.example` contains placeholders only and is safe to commit. Copy it to `server/.env` for local development and replace every placeholder with a real secret.
+\\- Backend code must import validated settings from `server/src/config/env.ts` rather than reading `process.env` directly.
+\- The Gemini API key previously present in this document must be revoked and replaced in Google AI Studio. Removing it from Git does not invalidate the credential.
+\- Production deployments must inject the key as a secret at runtime; logs, API responses, client bundles, and source control must not contain it.
 
 &nbsp;
 
