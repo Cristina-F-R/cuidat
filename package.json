@@ -12,9 +12,9 @@
     "dev:client": "npm run dev -w client",
     "dev:server": "npm run dev -w server",
     "build": "npm run build -w shared && npm run build -w client && npm run build -w server",
-    "test:unit": "vitest run",
+    "test:unit": "vitest run tests/unit",
     "test:e2e": "playwright test",
-    "typecheck": "tsc -b shared client server",
+    "typecheck": "npm run typecheck -w @cuidat/shared && npm run typecheck -w client && npm run typecheck -w server",
     "lint": "eslint . --ext .ts,.vue"
   },
   "keywords": [],

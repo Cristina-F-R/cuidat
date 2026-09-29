@@ -6,6 +6,9 @@ export default {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Nunito Sans', 'sans-serif'],
+      },
       colors: {
         slate: '#496580',
         peach: '#FFDBBB',

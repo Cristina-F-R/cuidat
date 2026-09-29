@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "typecheck": "vue-tsc -b",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@cuidat/shared": "*",
     "@formkit/drag-and-drop": "^0.6.1",
     "@tailwindcss/vite": "^4.3.3",
     "dayjs": "^1.11.23",
