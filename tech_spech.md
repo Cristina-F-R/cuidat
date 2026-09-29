@@ -15,9 +15,10 @@ CuidaT is a reactive web application designed for visual tracking, deterministic
   2. Deterministic Correlation Discovery:
      - Computation: The client or server runs `detectCorrelations()` matching every symptom against prior triggers occurring within an immediate-to-delayed window (`0 <= diffHours <= maxWindowHours`, default 48h). Events outside this window or where the symptom precedes the trigger are strictly ignored.
      - Visualization: Coincidences highlight matching calendar days and populate `MonthlyInsightsSummary.vue` with explicit medical disclaimers ("Coincidencias, no diagnósticos; consultar con profesional").
-  3. Medication Leaflet / Booklet Ingestion (Zero-Cost Vision):
+  3. Medication Leaflet / Booklet Ingestion & Adverse Effect Matching (Zero-Cost Vision):
      - Ingestion: User uploads a photo of a leaflet or pet vaccination card. The backend processes the file ephemerally in RAM (Buffer) and sends it to Gemini API via `POST /api/ai/scan-leaflet`.
-     - Output: Returns structured JSON (`name`, `dosage`, `frequency`) to populate new tracking definitions. Persisting Base64 images in PostgreSQL is strictly prohibited.
+     - Output: Returns structured JSON (`name`, `dosage`, `frequency`, `adverseEffects`) to populate new tracking definitions. Persisting Base64 images in PostgreSQL is strictly prohibited.
+     - Pharmacovigilance Matching (ADR Guard): If an active correlation coincides with an item listed in `adverseEffects`, flag the correlation insight card with a dedicated tag: "Posible efecto adverso registrado en prospecto".
   4. Clinical Natural-Language Summary & PDF Export:
      - Trigger: User clicks "Ver resumen / Exportar" in the summary rail. The backend collects active month logs and invokes Gemini via `POST /api/ai/clinical-summary`.
      - Delivery: Gemini returns an objective clinical summary (symptom counts, frequency peaks, observed trigger pairings). The frontend renders the report with a 1-click download as a styled PDF using `jspdf` and `html2canvas`.
@@ -30,7 +31,7 @@ CuidaT is a reactive web application designed for visual tracking, deterministic
   - Empty State: When a category has 0 items, render a clean empty slate message ("No hay elementos registrados") with a primary CTA button to create one.
   - Cascading Deletion Guard: Deleting an item definition that is already referenced by existing logs must prompt an explicit confirmation modal ("Este elemento tiene registros asociados en el calendario. ¿Seguro que deseas eliminarlo? Se borrarán todos los eventos vinculados").
 
-- Critical Capabilities: Multi-profile management, hybrid tactile interface (Drag & Drop on desktop / Tap-to-select on mobile), deterministic time-window correlation engine (0–48h), anonymous guest session persisted in localStorage, 1-click evaluator demo mode, transactional user upgrade flow, and strict tenant isolation.
+- Critical Capabilities: Multi-profile management, hybrid tactile interface (Drag & Drop on desktop / Tap-to-select on mobile), deterministic time-window correlation engine (0–48h), anonymous guest session persisted in localStorage, 1-click evaluator demo mode, transactional user upgrade flow, progressive web app installation (PWA), and strict tenant isolation.
 - Budget & Infrastructure Constraint: The system must be developed, run, and hosted under a strict €0 operational cost utilizing free-tier infrastructure and open-source packages.
 
 ---
@@ -58,6 +59,9 @@ CuidaT is a reactive web application designed for visual tracking, deterministic
 - Filter Scope Disambiguation:
   - Top Filter Toolbar (FilterToolbar.vue): Restricts which log entries are rendered within calendar day cells (Show All, Symptoms Only, Triggers Only, Correlation Mode, or specific trigger chip).
   - Dock Tabs (SidebarDock.vue): Switches which palette of emoji tokens is available for dragging or tapping into the calendar.
+- Consultation Focus View:
+  - Accessible via a toggle in `FilterToolbar.vue` ("Modo Consulta").
+  - When active, collapses the left dock rail, suppresses direct editing/creation triggers, and maximizes the calendar grid and correlation insights for clean, distraction-free clinical evaluation during doctor/vet visits.
 - Interaction Contract (Hybrid Desktop/Mobile):
   - Desktop (>= 768px): HTML5 Drag-and-Drop from dock items into targeted calendar day cells.
   - Mobile (< 768px): Tap-to-select pattern. Tapping an emoji primes it in the dock; tapping a target calendar day places the event and opens the log modal, preventing mobile viewport scroll conflicts.
@@ -69,7 +73,9 @@ CuidaT is a reactive web application designed for visual tracking, deterministic
   - shared: Pure TypeScript domain models, Zod validation schemas, and deterministic business rules.
   - client: Frontend client built with Vue 3 (SFC script setup lang="ts"), Vite, Pinia, and Tailwind CSS.
   - server: Backend REST API built with Node.js, Express, TypeScript, Zod, and security middleware.
-- Client Utilities: dayjs (date manipulation), lucide-vue-next (icons), @formkit/drag-and-drop (accessible DnD), dompurify (anti-XSS sanitization).
+- Client Utilities & Plugins:
+  - dayjs (date manipulation), lucide-vue-next (icons), @formkit/drag-and-drop (accessible DnD), dompurify (anti-XSS sanitization).
+  - vite-plugin-pwa: Zero-cost PWA runtime providing offline asset caching and web application manifest (`display: standalone`, `theme_color: #496580`, `background_color: #FDFDFD`) for native-like mobile home screen installation.
 - Persistence & Cloud: PostgreSQL with UUID primary keys and date-range indexes. Deployed on zero-cost tiers (Neon.tech or Supabase Free).
 - AI Integrations (Zero Cost): Google Gemini API (Google AI Studio Free Tier) via @google/genai utilizing strict JSON Structured Outputs (responseSchema). Base64 image storage in PostgreSQL is strictly prohibited; images are parsed ephemerally in server RAM buffers.
 
@@ -87,6 +93,7 @@ CuidaT is a reactive web application designed for visual tracking, deterministic
 │       └── correlation.ts     # Pure deterministic correlation algorithms
 ├── /client
 │   ├── index.html             # Google Fonts preconnect & root container
+│   ├── vite.config.ts         # Vite configuration with vite-plugin-pwa
 │   ├── tailwind.config.js     # Extended color palette & typography
 │   └── src/
 │       ├── components/
@@ -245,3 +252,28 @@ export function detectCorrelations(
     responseMimeType: "application/json",
     responseSchema: clinicalSummaryJsonSchema
   }
+- Leaflet Ingestion Schema Contract:
+  The schema for `POST /api/ai/scan-leaflet` must strictly enforce:
+  `name`: string (medication / vaccine name)
+  `dosage`: string (prescribed dose)
+  `frequency`: string (intake interval)
+  `adverseEffects`: array of strings (known side effects to be cross-matched by ADR guard)
+
+  ---
+
+## 10. Architectural Decision Records (ADRs)
+
+- ADR-001: Deterministic Math Engine vs. LLM for Correlation
+  - Context: Detecting temporal links between triggers and symptoms (0–48h).
+  - Decision: Implemented as a pure, deterministic TypeScript algorithm covered 100% by unit tests.
+  - Consequence: Completely eliminates LLM hallucinations, ensuring predictable and medically responsible clinical pattern discovery.
+
+- ADR-002: Ephemeral RAM Buffer for Medical Vision Ingestion
+  - Context: Extracting dosage and leaflet instructions using Gemini Multimodal API.
+  - Decision: Uploaded images are buffered transiently in server memory (RAM Buffer) and dispatched directly to the API, strictly forbidding Base64 storage in PostgreSQL.
+  - Consequence: Adheres to Zero-Cost tier constraints (Neon 0.5 GB quota) and upholds OWASP data privacy principles.
+
+- ADR-003: Hybrid Interaction Protocol (Desktop DnD vs. Mobile Tap-to-Select)
+  - Context: Touch screens trigger viewport scroll events during HTML5 Drag-and-Drop operations.
+  - Decision: Dynamic execution branching based on the 768px viewport breakpoint.
+  - Consequence: Zero interaction friction on touch screens and full desktop ergonomy without third-party mobile polyfills.
