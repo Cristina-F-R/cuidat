@@ -13,6 +13,7 @@ export interface CalendarProfile {
 
 export interface HealthItemDefinition {
   id: string
+  calendarId?: string
   name: string
   emoji: string
   category: ItemCategory

@@ -16,25 +16,22 @@ const emit = defineEmits<{
 <template>
   <button
     class="dock-item"
-    :class="{ 'dock-item-selected': isSelected }"
+    :class="[item.category, { 'dock-item-selected': isSelected }]"
     :draggable="!touchMode"
     :aria-pressed="isSelected"
-    :aria-label="`${item.name}, ${item.category === 'symptom' ? 'síntoma' : 'desencadenante'}`"
+    :aria-label="`${item.name}, ${item.category === 'symptom' ? 'síntoma' : item.category === 'trigger' ? 'desencadenante' : 'medicación'}`"
     @click="emit('select', item)"
     @dragstart="emit('dragStart', item, $event)"
   >
     <span class="dock-item-emoji" aria-hidden="true">{{ item.emoji }}</span>
     <span class="dock-item-name">{{ item.name }}</span>
-    <span class="dock-item-grip" aria-hidden="true">⠿</span>
   </button>
 </template>
 
 <style scoped>
-.dock-item { display: grid; grid-template-columns: 36px minmax(0, 1fr) 14px; align-items: center; gap: 10px; width: 100%; min-height: 54px; padding: 7px 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
-.dock-item:hover { background: var(--surface); }
-.dock-item-selected { border-color: var(--slate); background: var(--surface); box-shadow: inset 3px 0 var(--slate); }
-.dock-item-emoji { display: grid; place-items: center; width: 36px; aspect-ratio: 1; border-radius: 8px; background: var(--item-tint, var(--peach)); font-size: 19px; }
+.dock-item { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; gap: 9px; width: 100%; min-width: 0; min-height: 54px; padding: 7px 9px; border: 0; border-radius: 0; background: transparent; color: var(--slate); text-align: left; cursor: pointer; }
+.dock-item:hover { filter: brightness(.97); }
+.dock-item-emoji { display: grid; place-items: center; width: 36px; aspect-ratio: 1; border-radius: 8px; background: white; color: var(--slate); font-size: 19px; }
 .dock-item-name { overflow: hidden; font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-.dock-item-grip { color: var(--muted); font-size: 16px; }
-@media (max-width: 899px) { .dock-item { width: 160px; flex: 0 0 160px; } }
+@media (max-width: 899px) { .dock-item { width: 100%; flex: 0 0 auto; } }
 </style>

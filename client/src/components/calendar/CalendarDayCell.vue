@@ -2,15 +2,25 @@
 import type { CalendarDay } from '@cuidat/shared'
 import type { CalendarEntry } from '../../types/calendar'
 
-defineProps<{
+const props = defineProps<{
   day: CalendarDay
   entries: CalendarEntry[]
+  interactive: boolean
 }>()
 
 const emit = defineEmits<{
   selectDay: [date: string]
+  editEvent: [entry: CalendarEntry]
   dropItem: [date: string, event: DragEvent]
 }>()
+
+function editEntry(entry: CalendarEntry): void {
+  if (props.interactive) emit('editEvent', entry)
+}
+
+function allowDrop(event: DragEvent): void {
+  if (props.interactive) event.preventDefault()
+}
 </script>
 
 <template>
@@ -18,13 +28,13 @@ const emit = defineEmits<{
     class="day-cell"
     :class="{ 'day-outside': !day.isCurrentMonth, 'day-today': day.isToday }"
     :aria-label="day.date"
-    role="button"
+    role="gridcell"
     tabindex="0"
     @click="emit('selectDay', day.date)"
     @keydown.enter.prevent="emit('selectDay', day.date)"
     @keydown.space.prevent="emit('selectDay', day.date)"
-    @dragover.prevent
-    @drop.prevent.stop="emit('dropItem', day.date, $event)"
+    @dragover="allowDrop"
+    @drop.prevent.stop="interactive && emit('dropItem', day.date, $event)"
   >
     <span class="day-number">{{ day.dayOfMonth }}</span>
     <div class="day-events" :aria-label="`${entries.length} registros`">
@@ -34,6 +44,11 @@ const emit = defineEmits<{
         class="day-event"
         :class="entry.item.category"
         :title="entry.item.name"
+        :role="interactive ? 'button' : undefined"
+        :tabindex="interactive ? 0 : undefined"
+        @click.stop="editEntry(entry)"
+        @keydown.enter.stop="editEntry(entry)"
+        @keydown.space.prevent.stop="editEntry(entry)"
       >
         <span aria-hidden="true">{{ entry.item.emoji }}</span>
         <span class="day-event-name">{{ entry.item.name }}</span>
@@ -51,9 +66,9 @@ const emit = defineEmits<{
 .day-number { align-self: flex-start; font-size: 12px; font-weight: 900; }
 .day-events { display: grid; gap: 3px; overflow: hidden; }
 .day-event { display: flex; min-width: 0; align-items: center; gap: 4px; overflow: hidden; border-radius: 4px; padding: 2px 4px; font-size: 10px; line-height: 1.3; }
-.day-event.symptom { background: #fff0e3; }
-.day-event.trigger { background: var(--mint); }
-.day-event.medication { background: var(--sky); }
+.day-event.symptom { background: var(--peach); color: var(--slate); }
+.day-event.trigger { background: var(--mint); color: var(--slate); }
+.day-event.medication { background: var(--sky); color: var(--slate); }
 .day-event-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .event-overflow { color: var(--muted); font-size: 10px; font-weight: 800; }
 @media (max-width: 600px) { .day-cell { min-height: 64px; padding: 6px 3px; } .day-event { justify-content: center; padding: 2px; } .day-event-name { display: none; } }

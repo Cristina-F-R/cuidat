@@ -25,6 +25,8 @@ CuidaT is a reactive web application designed for visual tracking, deterministic
   5. Guest Mode Persistence & Zero-Data-Loss Migration:
      - Demo Workflow: Unregistered users track events locally under `@cuidat_guest_v1`.
      - Conversion: Upon registration, the frontend sends the local payload to `POST /api/auth/upgrade`. The backend creates the user and inserts all profiles/logs within a single atomic PostgreSQL transaction (`BEGIN ... COMMIT`) before wiping local storage.
+  6. Day Summary Drill-Down: 
+      - Clicking on an empty area of a calendar day cell (when no dock item is preselected) opens DaySummaryModal.vue, rendering a chronological breakdown of that date's logged symptoms and triggers with their respective intensities, times, and sanitized notes.
 
 - Dynamic Dock & Catalog Management:
   - Maximum Capacity: Maximum of 15 active item definitions per category (symptoms/triggers) per calendar profile.

@@ -1,9 +1,12 @@
 import type { CorrelationMatch } from './types'
 
+const DEFAULT_MAX_WINDOW_HOURS = 48
+const MILLISECONDS_PER_HOUR = 60 * 60 * 1000
+
 export function detectCorrelations<TEvent extends { id: string; loggedAt: string }>(
   triggers: TEvent[],
   symptoms: TEvent[],
-  maxWindowHours: number = 48,
+  maxWindowHours: number = DEFAULT_MAX_WINDOW_HOURS,
 ): CorrelationMatch<TEvent>[] {
   const matches: CorrelationMatch<TEvent>[] = []
 
@@ -15,7 +18,7 @@ export function detectCorrelations<TEvent extends { id: string; loggedAt: string
       const triggerTime = new Date(trigger.loggedAt).getTime()
       if (!Number.isFinite(triggerTime)) continue
 
-      const diffHours = (symptomTime - triggerTime) / (1000 * 60 * 60)
+      const diffHours = (symptomTime - triggerTime) / MILLISECONDS_PER_HOUR
       if (diffHours >= 0 && diffHours <= maxWindowHours) {
         matches.push({
           triggerEvent: trigger,

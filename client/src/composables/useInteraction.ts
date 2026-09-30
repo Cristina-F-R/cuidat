@@ -1,4 +1,4 @@
-import { computed, onMounted, onUnmounted, ref, type ComputedRef, type Ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, toValue, watch, type ComputedRef, type MaybeRefOrGetter, type Ref } from 'vue'
 import type { HealthItemDefinition } from '@cuidat/shared'
 
 export const TOUCH_BREAKPOINT_PX = 768
@@ -13,12 +13,15 @@ export interface UseInteractionResult {
   getDraggedItemId: (event: DragEvent) => string | null
 }
 
-export function useInteraction(items: HealthItemDefinition[]): UseInteractionResult {
+export function useInteraction(items: MaybeRefOrGetter<HealthItemDefinition[]>): UseInteractionResult {
   const isTouchMode = ref(false)
   const selectedItemId = ref<string | null>(null)
   const selectedItem = computed<HealthItemDefinition | null>(() =>
-    items.find((item) => item.id === selectedItemId.value) ?? null,
+    toValue(items).find((item) => item.id === selectedItemId.value && item.isActive) ?? null,
   )
+  watch(() => toValue(items), (currentItems) => {
+    if (!currentItems.some((item) => item.id === selectedItemId.value && item.isActive)) selectedItemId.value = null
+  })
   let mediaQuery: MediaQueryList | null = null
 
   function updateInputMode(): void {

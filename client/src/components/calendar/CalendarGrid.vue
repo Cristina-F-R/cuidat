@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, CalendarDays } from 'lucide-vue-next'
 import type { CalendarDay, EventFilter, HealthItemDefinition } from '@cuidat/shared'
 import type { CalendarEntry } from '../../types/calendar'
 import CalendarDayCell from './CalendarDayCell.vue'
+import FilterToolbar from './FilterToolbar.vue'
 
 const props = defineProps<{
   days: CalendarDay[]
@@ -14,6 +15,7 @@ const props = defineProps<{
   filter: EventFilter
   touchMode: boolean
   selectedItem: HealthItemDefinition | null
+  consultationMode: boolean
 }>()
 
 const emit = defineEmits<{
@@ -22,15 +24,10 @@ const emit = defineEmits<{
   today: []
   selectDay: [date: string]
   dropItem: [date: string, event: DragEvent]
+  editEvent: [entry: CalendarEntry]
   filterChange: [filter: EventFilter]
+  consultationModeChange: [enabled: boolean]
 }>()
-
-const filters: Array<{ value: EventFilter; label: string }> = [
-  { value: 'all', label: 'Todo' },
-  { value: 'symptoms', label: 'Síntomas' },
-  { value: 'triggers', label: 'Desencadenantes' },
-  { value: 'correlations', label: 'Coincidencias' },
-]
 
 const visibleEntries = computed<CalendarEntry[]>(() => {
   if (props.filter === 'symptoms') return props.entries.filter(({ item }) => item.category === 'symptom')
@@ -64,18 +61,14 @@ function forwardDrop(date: string, event: DragEvent): void {
       </div>
     </header>
 
-    <div class="calendar-toolbar">
-      <div class="filter-tabs" aria-label="Filtrar registros">
-        <button
-          v-for="option in filters"
-          :key="option.value"
-          :aria-pressed="filter === option.value"
-          @click="emit('filterChange', option.value)"
-        >{{ option.label }}</button>
-      </div>
-      <p v-if="selectedItem" class="selected-hint">{{ selectedItem.emoji }} {{ selectedItem.name }} <span>· toca un día</span></p>
-      <p v-else-if="touchMode" class="selected-hint">Selecciona un elemento del dock</p>
-    </div>
+    <FilterToolbar
+      :filter="filter"
+      :touch-mode="touchMode"
+      :selected-item="selectedItem"
+      :consultation-mode="consultationMode"
+      @filter-change="emit('filterChange', $event)"
+      @consultation-mode-change="emit('consultationModeChange', $event)"
+    />
 
     <div class="calendar-grid" role="grid" :aria-label="monthLabel">
       <div v-for="weekday in weekdayLabels" :key="weekday" class="weekday" role="columnheader">{{ weekday }}</div>
@@ -84,7 +77,9 @@ function forwardDrop(date: string, event: DragEvent): void {
         :key="day.date"
         :day="day"
         :entries="entriesForDay(day.date)"
+        :interactive="!consultationMode"
         @select-day="emit('selectDay', $event)"
+        @edit-event="emit('editEvent', $event)"
         @drop-item="forwardDrop"
       />
     </div>
@@ -103,12 +98,6 @@ h1 { margin: 3px 0 0; color: var(--ink); font-size: 22px; font-weight: 900; line
 .month-controls button { height: 34px; border: 1px solid var(--line); border-radius: 7px; background: white; color: var(--ink); cursor: pointer; }
 .today-button { padding: 0 11px; font-size: 12px; font-weight: 800; }
 .icon-button { display: grid; place-items: center; width: 34px; padding: 0; }
-.calendar-toolbar { display: flex; min-height: 50px; align-items: center; justify-content: space-between; gap: 10px; margin-top: 17px; }
-.filter-tabs { display: flex; gap: 3px; overflow-x: auto; }
-.filter-tabs button { flex: 0 0 auto; min-height: 32px; padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 800; cursor: pointer; }
-.filter-tabs button[aria-pressed="true"] { background: var(--tint); color: var(--ink); }
-.selected-hint { overflow: hidden; margin: 0; color: var(--slate); font-size: 11px; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
-.selected-hint span { color: var(--muted); font-weight: 600; }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--line); border-radius: 7px; }
 .weekday { display: grid; min-width: 0; height: 34px; place-items: center; border-bottom: 1px solid var(--line); background: #f4f8fa; color: var(--muted); font-size: 9px; font-weight: 900; }
 .weekday:not(:nth-child(7n)) { border-right: 1px solid var(--line); }
@@ -118,5 +107,5 @@ h1 { margin: 3px 0 0; color: var(--ink); font-size: 22px; font-weight: 900; line
 .calendar-footnote { display: flex; align-items: center; gap: 7px; margin-top: 13px; color: var(--muted); font-size: 10px; }
 .today-key { width: 8px; height: 8px; border-radius: 50%; background: var(--slate); }
 .footnote-divider { color: var(--peach); font-weight: 900; }
-@media (max-width: 600px) { .calendar-panel { padding: 13px 9px; } .calendar-icon { display: none; } h1 { font-size: 19px; } .calendar-header { gap: 5px; } .calendar-toolbar { flex-direction: column; align-items: flex-start; padding: 7px 0; } .calendar-grid :deep(.day-cell) { min-height: 62px; } }
+@media (max-width: 600px) { .calendar-panel { padding: 13px 9px; } .calendar-icon { display: none; } h1 { font-size: 19px; } .calendar-header { gap: 5px; } .calendar-grid :deep(.day-cell) { min-height: 62px; } }
 </style>
