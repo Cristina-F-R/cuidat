@@ -26,14 +26,18 @@ CuidaT is a reactive web application designed for visual tracking, deterministic
      - Demo Workflow: Unregistered users track events locally under `@cuidat_guest_v1`.
      - Conversion: Upon registration, the frontend sends the local payload to `POST /api/auth/upgrade`. The backend creates the user and inserts all profiles/logs within a single atomic PostgreSQL transaction (`BEGIN ... COMMIT`) before wiping local storage.
   6. Day Summary Drill-Down: 
-      - Clicking on an empty area of a calendar day cell (when no dock item is preselected) opens DaySummaryModal.vue, rendering a chronological breakdown of that date's logged symptoms and triggers with their respective intensities, times, and sanitized notes.
+     - Clicking on an empty area of a calendar day cell (when no dock item is preselected) opens `DaySummaryModal.vue`, rendering a chronological breakdown of that date's logged symptoms and triggers with their respective intensities, times, and sanitized notes.
+  7. User Profile Lifecycle, Session State & GDPR Data Rights:
+     - Profile & Session UI: The application header (`AppHeader.vue`) dynamically reacts to the authentication state. In guest mode, it displays a neutral badge ("Modo Local") and the primary "Iniciar sesión" CTA. In authenticated mode, it displays a success badge ("Sincronizado") and a profile dropdown displaying the active user's email.
+     - GDPR Portability (Art. 20): Authenticated users can invoke "Descargar mis datos" from the profile menu to trigger an immediate, non-blocking client-side download of their entire clinical dataset as a structured JSON file.
+     - GDPR Right to be Forgotten (Art. 17): The user can permanently erase their account via `DELETE /api/auth/account`. This action requires passing a double-barrier text confirmation modal (typing "ELIMINAR"). Upon completion, all user records are pruned from PostgreSQL in a single atomic cascade transaction, Pinia stores are reset, local session tokens are purged, and the UI transitions smoothly to a clean guest state.
 
 - Dynamic Dock & Catalog Management:
   - Maximum Capacity: Maximum of 15 active item definitions per category (symptoms/triggers) per calendar profile.
   - Empty State: When a category has 0 items, render a clean empty slate message ("No hay elementos registrados") with a primary CTA button to create one.
   - Cascading Deletion Guard: Deleting an item definition that is already referenced by existing logs must prompt an explicit confirmation modal ("Este elemento tiene registros asociados en el calendario. ¿Seguro que deseas eliminarlo? Se borrarán todos los eventos vinculados").
 
-- Critical Capabilities: Multi-profile management, hybrid tactile interface (Drag & Drop on desktop / Tap-to-select on mobile), deterministic time-window correlation engine (0–48h), anonymous guest session persisted in localStorage, 1-click evaluator demo mode, transactional user upgrade flow, progressive web app installation (PWA), and strict tenant isolation.
+- Critical Capabilities: Multi-profile management, hybrid tactile interface (Drag & Drop on desktop / Tap-to-select on mobile), deterministic time-window correlation engine (0–48h), anonymous guest session persisted in localStorage, 1-click evaluator demo mode, transactional user upgrade flow, progressive web app installation (PWA), full GDPR compliance (data export and atomic account erasure), and strict tenant isolation.
 - Budget & Infrastructure Constraint: The system must be developed, run, and hosted under a strict €0 operational cost utilizing free-tier infrastructure and open-source packages.
 
 ---
@@ -51,6 +55,17 @@ CuidaT is a reactive web application designed for visual tracking, deterministic
 ### Typography
 - Primary Font Family: Nunito Sans, sans-serif.
 - Mandatory Weights: 400 (Regular), 600 (SemiBold), 700 (Bold), 800 (ExtraBold), 900 (Black). Loaded via Google Fonts CDN in index.html.
+
+### Header & Session State Design Patterns
+- Header Navigation Reactive States (`AppHeader.vue`):
+  - Guest State: Renders a neutral contextual chip (`bg-slate-100 text-slate-600`: "Modo Local") and the primary action button to open `AuthModal.vue`.
+  - Authenticated State: Replaces the login button with a connectivity badge (`bg-mint/30 text-slate-800`: "Sincronizado") and a dropdown trigger displaying the user's email with a chevron indicator.
+  - Dropdown Menu Options:
+    1. "Descargar mis datos (JSON)" -> Triggers instant client-side data serialization.
+    2. "Cerrar sesión" -> Invalidates local session and restores clean guest store.
+    3. "Eliminar cuenta y datos" (Destructive text in red/alert token) -> Opens destructive confirmation modal.
+- Destructive Confirmation Barrier (Double-Verification Pattern):
+  - Any permanent data-destructive procedure (e.g., account erasure) must render a modal locking the primary destructive CTA behind a reactive text-input match condition. The user must manually input the exact word `"ELIMINAR"` to activate the action button.
 
 ### Workspace Layout (Desktop vs. Mobile)
 - 3-Column Grid Desktop Layout (workspace):
@@ -102,14 +117,15 @@ CuidaT is a reactive web application designed for visual tracking, deterministic
 │       │   ├── calendar/      # CalendarGrid.vue, CalendarDayCell.vue
 │       │   ├── dock/          # SidebarDock.vue, DraggableBadge.vue
 │       │   ├── summary/       # MonthlyInsightsSummary.vue
-│       │   └── modals/        # EventLogModal.vue (Create / Update / Delete)
+│       │   ├── layout/        # AppHeader.vue (Reactive session states & Profile dropdown)
+│       │   └── modals/        # EventLogModal.vue, DaySummaryModal.vue, DeleteAccountModal.vue
 │       ├── composables/       # useCalendar.ts, useInteraction.ts
 │       ├── stores/            # useProfileStore.ts, useEventStore.ts, useAuthStore.ts, useItemDefinitionStore.ts
 │       └── views/             # LandingView.vue, DashboardView.vue, SettingsView.vue
 ├── /server
 │   └── src/
-│       ├── controllers/       # Express HTTP controllers
-│       ├── middlewares/       # AuthMiddleware, RateLimiter (express-rate-limit)
+│       ├── controllers/       # Express HTTP controllers (auth, events, ai)
+│       ├── middlewares/       # AuthMiddleware, RateLimiter (express-rate-limit), Cors
 │       ├── repositories/      # Tenant-scoped PostgreSQL data access
 │       ├── services/          # Business logic & Google Gemini AI service
 │       └── db/                # SQL migration files, connection pooling, and seeds.sql
@@ -139,6 +155,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     email VARCHAR(255) UNIQUE,
+    password_hash VARCHAR(255),
     is_anonymous BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -165,7 +182,7 @@ CREATE TABLE health_item_definitions (
 CREATE TABLE health_event_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     calendar_id UUID NOT NULL REFERENCES calendar_profiles(id) ON DELETE CASCADE,
-    item_definition_id UUID NOT NULL REFERENCES health_item_definitions(id) ON DELETE RESTRICT,
+    item_definition_id UUID NOT NULL REFERENCES health_item_definitions(id) ON DELETE CASCADE,
     logged_at TIMESTAMP WITH TIME ZONE NOT NULL,
     intensity SMALLINT NOT NULL CHECK (intensity BETWEEN 1 AND 3), -- 1: Mild, 2: Moderate, 3: Severe
     notes VARCHAR(300),
@@ -228,20 +245,25 @@ export function detectCorrelations(
 - Repository-Level Isolation: All database reads, updates, and deletes must explicitly bind the authenticated user's ID via joins or ownership clauses:
   SELECT l.* FROM health_event_logs l
   JOIN calendar_profiles p ON l.calendar_id = p.id
-  WHERE p.user_id = $current_user_id AND l.calendar_id = $calendar_id;
+  WHERE p.user_id = $current_user_id AND l.calendar_id =$calendar_id;
 - Rate-Limiting: AI endpoints (/api/ai/*) must enforce an IP-based rate limit via express-rate-limit (maximum 5 requests per hour) to safeguard external API quotas.
 - Input Sanitization: Free-text inputs (notes) must be sanitized using DOMPurify.sanitize() prior to client storage or DOM insertion.
 - Standardized API Response Contract:
-  - Success: { "success": true, "data": T }
-  - Error: { "success": false, "code": "ERROR_CODE", "message": "Human-readable context" }
-- System Health Monitoring: The backend must expose an unauthenticated `GET /api/health` endpoint returning { "status": "ok", "timestamp": string, "uptime": number } for cloud orchestrator liveness probes.
+  - Success: `{ "success": true, "data": T }`
+  - Error: `{ "success": false, "code": "ERROR_CODE", "message": "Human-readable context" }`
+- System Health Monitoring: The backend must expose an unauthenticated `GET /api/health` endpoint returning `{ "status": "ok", "timestamp": string, "uptime": number }` for cloud orchestrator liveness probes.
 - Guest Storage & Account Migration: Unregistered demo data resides under the `@cuidat_guest_v1` localStorage key. `POST /api/auth/upgrade` moves the local payload into PostgreSQL within a single atomic database transaction (`BEGIN ... COMMIT`).
+- GDPR Right to be Forgotten (Account Deletion API):
+  - Route: `DELETE /api/auth/account`
+  - Security: Protected via `AuthMiddleware` verifying standard Bearer JWT.
+  - Transactional Semantics: Executes `DELETE FROM users WHERE id = $current_user_id`. Due to schema-level `ON DELETE CASCADE` foreign keys, all associated `calendar_profiles`, `health_item_definitions`, and `health_event_logs` are deleted atomically.
+  - Response Contract: Returns `200 OK` with `{ "success": true, "message": "Cuenta y datos asociados eliminados permanentemente." }`.
+- Data Sovereignty & Portability (GDPR Art. 20):
+  - Client-side export mechanism serializes the user's active Pinia stores (`profiles`, `items`, `logs`) into an unencrypted, standardized JSON format (`cuidat_backup_YYYY-MM-DD.json`).
 - Migration & Seed Governance: Database changes must strictly follow ordered SQL migration files (`server/src/db/migrations/00X_name.sql`) executed sequentially via an idempotent migration runner tracking an `applied_migrations` metadata table. A deterministic seed file (`server/src/db/seeds.sql`) must populate a full evaluator test scenario (`demo@cuidat.app`).
 - Evaluator / Demo 1-Click Access:
   - The login interface must include a direct "Acceso Demo / Evaluador" CTA.
   - Clicking this button seeds the active session (locally in localStorage or via pre-seeded demo user) with a complete dataset: an active profile ("Moby"), populated symptom/trigger catalogues, and realistic correlated logs for the current month.
-- Data Sovereignty & Portability:
-  - Provide client-side export and import functionality allowing users to download their entire history as a JSON file and restore it on demand.
 
 ---
 
@@ -261,7 +283,7 @@ export function detectCorrelations(
   `frequency`: string (intake interval)
   `adverseEffects`: array of strings (known side effects to be cross-matched by ADR guard)
 
-  ---
+---
 
 ## 10. Architectural Decision Records (ADRs)
 
@@ -279,3 +301,8 @@ export function detectCorrelations(
   - Context: Touch screens trigger viewport scroll events during HTML5 Drag-and-Drop operations.
   - Decision: Dynamic execution branching based on the 768px viewport breakpoint.
   - Consequence: Zero interaction friction on touch screens and full desktop ergonomy without third-party mobile polyfills.
+
+- ADR-004: Client-Side GDPR Portability & Atomic Right to Be Forgotten
+  - Context: Health and symptom tracking constitutes special category data under GDPR Art. 9, requiring unambiguous mechanisms for data portability (Art. 20) and absolute erasure (Art. 17).
+  - Decision: Portability is handled client-side via standardized JSON serialization directly from reactive state, avoiding server load. Erasure is bound to a transactional `DELETE /api/auth/account` endpoint executing cascading foreign key deletions on PostgreSQL, protected on the frontend by a text-matching confirmation barrier ("ELIMINAR").
+  - Consequence: Full regulatory compliance achieved with zero ongoing infrastructure costs and zero orphan records in PostgreSQL.

@@ -65,7 +65,7 @@ header button { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-
 .intensity { padding: 4px 7px; border-radius: 5px; color: var(--slate); font-size: 10px; font-weight: 800; }
 .intensity-1 { background: var(--mint); }
 .intensity-2 { background: var(--peach); }
-.intensity-3 { background: #c65d4b; color: white; }
+.intensity-3 { @apply bg-red-600 text-white; }
 .event-notes { flex: 1 0 100%; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.45; overflow-wrap: anywhere; }
 .empty-day { margin: 20px 0 4px; color: var(--muted); font-size: 12px; }
 </style>

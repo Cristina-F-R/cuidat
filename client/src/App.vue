@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import DashboardHeader from './components/DashboardHeader.vue'
+import AppHeader from './components/layout/AppHeader.vue'
 import SidebarDock from './components/dock/SidebarDock.vue'
 import CalendarGrid from './components/calendar/CalendarGrid.vue'
 import MonthlyInsightsSummary from './components/summary/MonthlyInsightsSummary.vue'
@@ -7,6 +7,13 @@ import EventLogModal from './components/modals/EventLogModal.vue'
 import ConfirmCascadeModal from './components/modals/ConfirmCascadeModal.vue'
 import DaySummaryModal from './components/DaySummaryModal.vue'
 import { useDashboard } from './composables/useDashboard'
+import { useAccountSession } from './composables/useAccountSession'
+
+const {
+  authStore, authBusy, authError, authSuccessVersion,
+  deleteBusy, deleteError, deleteSuccessVersion,
+  login, upgrade, logout, exportData, deleteAccount,
+} = useAccountSession()
 
 const {
   profile, profiles, items, profileEntries, monthLabel, weekdayLabels, visibleDays,
@@ -18,13 +25,27 @@ const {
   setConsultationMode, showCorrelations, selectProfile, createProfile, closeDaySummary,
   cancelCascadeDelete, confirmCascadeDelete,
 } = useDashboard()
+
 </script>
 <template>
   <main class="app-shell">
-    <DashboardHeader
+    <AppHeader
       :profile="profile"
       :profiles="profiles"
+      :authenticated="authStore.isAuthenticated"
+      :user-email="authStore.email"
+      :auth-busy="authBusy"
+      :auth-error="authError"
+      :auth-success-version="authSuccessVersion"
+      :delete-busy="deleteBusy"
+      :delete-error="deleteError"
+      :delete-success-version="deleteSuccessVersion"
       @demo-access="enterDemo"
+      @login="login"
+      @upgrade="upgrade"
+      @export-data="exportData"
+      @logout="logout"
+      @delete-account="deleteAccount"
       @select-profile="selectProfile"
       @create-profile="createProfile"
     />

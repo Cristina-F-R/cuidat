@@ -43,6 +43,10 @@ export const useEventStore = defineStore('events', () => {
     events.value = nextEvents
   }
 
+  function resetState(): void {
+    events.value = []
+  }
+
   return {
     events,
     addEvent,
@@ -50,5 +54,6 @@ export const useEventStore = defineStore('events', () => {
     deleteEvent,
     deleteEventsForDefinition,
     replaceEvents,
+    resetState,
   }
 })

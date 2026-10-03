@@ -61,7 +61,7 @@ function allowDrop(event: DragEvent): void {
 <style scoped>
 .day-cell { display: flex; min-width: 0; min-height: 88px; flex-direction: column; gap: 8px; padding: 9px 7px; border: 1px solid var(--line); background: var(--canvas); text-align: left; cursor: pointer; transition: background .16s ease, border-color .16s ease; }
 .day-cell:hover, .day-cell:focus-visible { z-index: 1; border-color: var(--slate); outline: none; background: white; }
-.day-outside { background: #f5f8fa; color: #9aa9b5; }
+.day-outside { @apply border-slate/10 bg-slate/5 text-slate/40; }
 .day-today .day-number { display: grid; place-items: center; width: 26px; height: 26px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--slate); color: white; }
 .day-number { align-self: flex-start; font-size: 12px; font-weight: 900; }
 .day-events { display: grid; gap: 3px; overflow: hidden; }

@@ -99,7 +99,8 @@ h1 { margin: 3px 0 0; color: var(--ink); font-size: 22px; font-weight: 900; line
 .today-button { padding: 0 11px; font-size: 12px; font-weight: 800; }
 .icon-button { display: grid; place-items: center; width: 34px; padding: 0; }
 .calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); overflow: hidden; border: 1px solid var(--line); border-radius: 7px; }
-.weekday { display: grid; min-width: 0; height: 34px; place-items: center; border-bottom: 1px solid var(--line); background: #f4f8fa; color: var(--muted); font-size: 9px; font-weight: 900; }
+.weekday { display: grid; min-width: 0; height: 34px; place-items: center; border-bottom: 1px solid var(--line); font-size: 9px; font-weight: 900; }
+.weekday { @apply border-slate/10 bg-slate/5 text-slate/60; }
 .weekday:not(:nth-child(7n)) { border-right: 1px solid var(--line); }
 .calendar-grid :deep(.day-cell) { border-top: 0; border-left: 0; }
 .calendar-grid :deep(.day-cell:nth-child(7n)) { border-right: 0; }

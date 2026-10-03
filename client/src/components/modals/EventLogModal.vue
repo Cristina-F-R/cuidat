@@ -87,7 +87,8 @@ h2 { margin: 3px 0 0; font-size: 20px; font-weight: 900; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 15px; }
 .modal-actions button { min-height: 40px; padding: 0 14px; border: 1px solid var(--line); border-radius: 7px; font-size: 12px; font-weight: 800; cursor: pointer; }
 .secondary-button { background: white; color: var(--ink); }
-.delete-button { display: inline-flex; align-items: center; gap: 5px; margin-right: auto; background: white; color: #9d4234; }
+.delete-button { display: inline-flex; align-items: center; gap: 5px; margin-right: auto; background: white; }
+.delete-button { @apply text-red-600; }
 .primary-button { border-color: var(--slate) !important; background: var(--slate); color: white; }
 @media (max-width: 480px) { .event-modal { padding: 17px; } .field-label span { display: block; margin-top: 3px; } }
 </style>

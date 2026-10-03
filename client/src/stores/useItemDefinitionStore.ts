@@ -79,5 +79,9 @@ export const useItemDefinitionStore = defineStore('itemDefinitions', () => {
     itemDefinitions.value = definitions
   }
 
-  return { itemDefinitions, activeItems, addDefinition, updateDefinition, deleteDefinition, activeCount, replaceDefinitions }
+  function resetState(): void {
+    itemDefinitions.value = []
+  }
+
+  return { itemDefinitions, activeItems, addDefinition, updateDefinition, deleteDefinition, activeCount, replaceDefinitions, resetState }
 })

@@ -33,5 +33,10 @@ export const useProfileStore = defineStore('profiles', () => {
     activeProfileId.value = nextActiveProfileId
   }
 
-  return { profiles, activeProfileId, activeProfile, setActiveProfile, addProfile, replaceProfiles }
+  function resetState(): void {
+    profiles.value = []
+    activeProfileId.value = null
+  }
+
+  return { profiles, activeProfileId, activeProfile, setActiveProfile, addProfile, replaceProfiles, resetState }
 })

@@ -14,8 +14,9 @@ test.describe('Phase 1 dashboard', () => {
     await page.locator('#event-notes').fill('Prueba de registro')
     await page.getByRole('button', { name: 'Guardar registro' }).click()
     await expect(page.getByRole('dialog')).toBeHidden()
+    await expect(page.locator('.day-event').filter({ hasText: 'Vómitos' })).toBeVisible()
     await page.getByRole('button', { name: 'Coincidencias', exact: true }).click()
-    await expect(page.locator('.day-event').first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Todo', exact: true })).toHaveAttribute('aria-pressed', 'false')
     expect(pageErrors).toEqual([])
   })
 
@@ -176,11 +177,12 @@ test.describe('Phase 1 dashboard', () => {
     const triggerColors = await triggerBadge.evaluate((element) => ({
       color: getComputedStyle(element).color,
     }))
-    await expect(triggerCard).toHaveCSS('background-color', 'rgb(209, 250, 238)')
+    await expect(triggerCard).toHaveCSS('background-color', 'rgb(186, 255, 245)')
     expect(triggerColors.color).toBe('rgb(73, 101, 128)')
   })
 
   test('edits a catalog definition and updates historical calendar events reactively', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-10-20T12:00:00.000Z') })
     await page.goto('http://127.0.0.1:5173/')
     await page.getByRole('button', { name: 'Iniciar sesión' }).click()
     await page.getByRole('button', { name: 'Acceso Demo / Evaluador (1-click)' }).click()
@@ -209,7 +211,7 @@ test.describe('Phase 1 dashboard', () => {
 
     await page.locator('.day-event.trigger').first().click()
     await expect(page.locator('.modal-item-icon')).toHaveClass(/trigger/)
-    await expect(page.locator('.modal-item-icon')).toHaveCSS('background-color', 'rgb(209, 250, 238)')
+    await expect(page.locator('.modal-item-icon')).toHaveCSS('background-color', 'rgb(186, 255, 245)')
   })
 
   test('keeps the expanded emoji palette and save actions within a short mobile viewport', async ({ page }) => {

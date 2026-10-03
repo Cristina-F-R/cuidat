@@ -7,6 +7,8 @@ import type {
 } from '@cuidat/shared'
 
 export const GUEST_STORAGE_KEY = '@cuidat_guest_v1'
+export const AUTH_TOKEN_KEY = '@cuidat_auth_token_v1'
+export const AUTH_EMAIL_KEY = '@cuidat_auth_email_v1'
 
 export interface GuestState {
   profiles: CalendarProfile[]
@@ -85,9 +87,18 @@ export function readGuestState(): GuestState {
 
 export function persistGuestField<K extends keyof GuestState>(field: K, value: GuestState[K]): void {
   try {
+    if (localStorage.getItem(AUTH_TOKEN_KEY)) return
     const nextState = { ...readGuestState(), [field]: value }
     localStorage.setItem(GUEST_STORAGE_KEY, JSON.stringify(nextState))
   } catch {
     // Storage may be unavailable in private browsing or when the device is full.
+  }
+}
+
+export function clearGuestState(): void {
+  try {
+    localStorage.removeItem(GUEST_STORAGE_KEY)
+  } catch {
+    // Storage may be unavailable in private browsing.
   }
 }
